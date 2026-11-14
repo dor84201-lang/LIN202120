@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111827">
+<title>Uber Eats 訂單網址轉換器</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#0b1220;color:#f8fafc;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;display:grid;place-items:center;padding:20px}
+main{width:min(100%,620px);background:#111c30;border:1px solid #263750;border-radius:20px;padding:26px;box-shadow:0 18px 55px #0006}
+h1{font-size:25px;margin:0 0 8px}p{color:#bdc9d9;line-height:1.65}.hint{font-size:13px;color:#91a4bc}
+label{display:block;margin:22px 0 8px;font-weight:650}textarea,input{width:100%;border:1px solid #40536e;border-radius:12px;background:#0b1424;color:#fff;padding:14px;font:inherit}textarea{min-height:115px;resize:vertical}
+button{border:0;border-radius:12px;background:#16a36a;color:white;font-weight:700;padding:14px 18px;font-size:16px;cursor:pointer;width:100%;margin-top:14px}
+button.secondary{background:#30435f}.result{display:none;margin-top:22px;padding:16px;background:#0b1424;border:1px solid #2b405e;border-radius:12px;overflow-wrap:anywhere}.result a{color:#70d9ad}.error{color:#ff9b9b;min-height:24px;margin-top:10px}.row{display:flex;gap:10px}.row button{flex:1}.back{display:inline-block;color:#9fc8ff;margin-top:20px}
+</style>
+</head>
+<body>
+<main>
+<h1>Uber Eats 訂單網址轉換器</h1>
+<p>貼上 Uber Eats 訂單網址，產生使用隨機 ID 的分享連結。</p>
+<label for="source">Uber Eats 原始訂單網址</label>
+<textarea id="source" placeholder="https://www.ubereats.com/tw/orders/..."></textarea>
+<div class="error" id="error" role="alert"></div>
+<button id="make">產生轉換網址</button>
+<section class="result" id="result">
+<p>轉換完成：</p>
+<a id="output" href="#" target="_blank" rel="noopener"></a>
+<div class="row">
+<button class="secondary" id="copy">複製網址</button>
+<button class="secondary" id="open">測試開啟</button>
+</div>
+<p class="hint">分享時請複製完整網址（包含 # 後面的資料）。</p>
+</section>
+<p class="hint">隱私說明：原始網址以 Base64URL 編碼放在 # 片段中；這不是加密，也不是伺服器端匿名儲存。任何取得完整分享網址的人，都可能還原原始網址。</p>
+<a class="back" href="index.html">← 返回首頁</a>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+function toBase64Url(value){
+  const bytes=new TextEncoder().encode(value);
+  let binary="";
+  bytes.forEach(b=>binary+=String.fromCharCode(b));
+  return btoa(binary).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+function validOrderUrl(value){
+  let u;
+  try{u=new URL(value.trim())}catch{return false}
+  const host=u.hostname.toLowerCase();
+  return u.protocol==="https:" &&
+    (host==="ubereats.com" || host.endsWith(".ubereats.com")) &&
+    /^\/(tw\/)?orders\//i.test(u.pathname);
+}
+$("make").addEventListener("click",()=>{
+  $("error").textContent="";
+  $("result").style.display="none";
+  const source=$("source").value.trim();
+  if(!validOrderUrl(source)){
+    $("error").textContent="請輸入有效的 HTTPS Uber Eats 訂單網址（/tw/orders/ 或 /orders/）。";
+    return;
+  }
+  if(!crypto.randomUUID){
+    $("error").textContent="目前瀏覽器不支援安全隨機 ID，請更新 Chrome 後再試。";
+    return;
+  }
+  const id=crypto.randomUUID();
+  const encoded=toBase64Url(source);
+  const shareUrl="https://9ysong.shop/track.html?id="+encodeURIComponent(id)+"#u="+encoded;
+  $("output").href=shareUrl;
+  $("output").textContent=shareUrl;
+  $("result").style.display="block";
+});
+$("copy").addEventListener("click",async()=>{
+  const value=$("output").href;
+  try{await navigator.clipboard.writeText(value);$("copy").textContent="已複製";}
+  catch{$("copy").textContent="請長按上方網址複製";}
+});
+$("open").addEventListener("click",()=>window.open($("output").href,"_blank","noopener"));
+</script>
+</body>
+</html>

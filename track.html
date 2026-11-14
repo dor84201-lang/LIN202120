@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>正在開啟訂單</title>
+<style>
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b1220;color:#f8fafc;font-family:system-ui,sans-serif;padding:20px}
+main{max-width:520px;text-align:center;background:#111c30;border:1px solid #263750;border-radius:18px;padding:28px}
+p{color:#bdc9d9;line-height:1.6}a{color:#7dd3a7;overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<main>
+<h2>正在安全檢查訂單連結…</h2>
+<p id="status">請稍候，正在確認目的網址。</p>
+<p><a id="manual" href="#" hidden>如果沒有自動跳轉，請點此開啟 Uber Eats 訂單</a></p>
+</main>
+<script>
+function fromBase64Url(value){
+  const base=value.replace(/-/g,"+").replace(/_/g,"/");
+  const padded=base+"=".repeat((4-base.length%4)%4);
+  const binary=atob(padded);
+  const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+function allowed(value){
+  let u;
+  try{u=new URL(value)}catch{return false}
+  const host=u.hostname.toLowerCase();
+  return u.protocol==="https:" &&
+    (host==="ubereats.com" || host.endsWith(".ubereats.com")) &&
+    /^\/(tw\/)?orders\//i.test(u.pathname);
+}
+const params=new URLSearchParams(location.search);
+const id=params.get("id");
+const match=location.hash.match(/(?:^#|&)u=([A-Za-z0-9_-]+)/);
+if(!id || !/^[0-9a-f-]{36}$/i.test(id) || !match){
+  document.getElementById("status").textContent="連結資料不完整或格式錯誤。請確認複製的是完整網址。";
+}else{
+  try{
+    const target=fromBase64Url(match[1]);
+    if(!allowed(target)) throw new Error("不允許的目的網址");
+    const link=document.getElementById("manual");
+    link.href=target;
+    link.hidden=false;
+    document.getElementById("status").textContent="驗證完成，正在前往 Uber Eats。";
+    setTimeout(()=>location.replace(target),700);
+  }catch(e){
+    document.getElementById("status").textContent="無法驗證此連結，已停止跳轉。";
+  }
+}
+</script>
+</body>
+</html>
